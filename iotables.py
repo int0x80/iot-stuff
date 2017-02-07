@@ -1,8 +1,17 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 # -----------------------------------------------------------
 # Author: int0x80
 # License: WTFPL (http://www.wtfpl.net/)
+#
 # Usage: iotables.py [OPTIONS] <PCAP FILE...>
+# OPTIONS
+#  -d <NAME>, --device <NAME>
+#        Name for the device from which the pcap originated; e.g. Nest, Sonos, etc
+# 
+#  -o <PREFIX>, --output <PREFIX>
+#        Prefix for file names created with result output. Defaults to device name.
+# 
+# Example: python iotables.py -d Sonos -o sonos5 /tmp/sonos*.pcap
 #
 # IoTables analyzes packets captured from a device and tries
 # to generate relevant iptables rules. The goal is to assist
@@ -192,21 +201,6 @@ def iptables_rules(prefix, device, mac_address, transmissions):
 
 
 # -----------------------------------------------------------
-# Display usage
-# -----------------------------------------------------------
-def usage():
-  print '[*] Usage: {} [OPTIONS] <PCAP FILE...>'.format(sys.argv[0])
-  print '[*] OPTIONS'
-  print '     -d <NAME>, --device <NAME>'
-  print '           Name for the device from which the pcap originated; e.g. Nest, Sonos, etc'
-  print ''
-  print '     -o <PREFIX>, --output <PREFIX>'
-  print '           Prefix for file names created with result output. Defaults to device name.'
-  print ''
-  print '[*] Example: {} -d Sonos -o sonos5 /tmp/sonos*.pcap'.format(sys.argv[0])
-
-
-# -----------------------------------------------------------
 # Make it do the thing
 # -----------------------------------------------------------
 def main():
@@ -225,6 +219,10 @@ def main():
                     default='PERFECT5OUTOF7')
 
   options, pcaps = parser.parse_args()
+
+  # -----------------------------------------------------------
+  # Set the output file prefix if one was not specified
+  # -----------------------------------------------------------
   if options.prefix == 'PERFECT5OUTOF7':
     options.prefix = options.device
 
@@ -335,11 +333,12 @@ def main():
   # -----------------------------------------------------------
   # Generate iptables rules
   # -----------------------------------------------------------
-  mac_with_count = sorted(mac_with_count.items(), key=(lambda key: key[1]), reverse=True)
+  if len(mac_with_count) and len(unique_transmissions):
+    mac_with_count = sorted(mac_with_count.items(), key=(lambda key: key[1]), reverse=True)
 
-  print ''
-  print '[+] Generating iptables rules.'
-  iptables_rules(options.prefix, options.device, mac_with_count[0][0], unique_transmissions)
+    print ''
+    print '[+] Generating iptables rules.'
+    iptables_rules(options.prefix, options.device, mac_with_count[0][0], unique_transmissions)
 
 
 
