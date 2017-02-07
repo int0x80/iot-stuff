@@ -21,7 +21,7 @@
 # wifi network. A target device is associated to the network,
 # and all traffic is sniffed on the Pi. Whitelist the IPs and
 # MACs of the lab network and NICs, respectively, via the
-# LAB_NETWORKS and PI_MACS variables below.
+# LAB_NETWORKS and LAB_MACS variables below.
 # -----------------------------------------------------------
 
 import optparse
@@ -35,7 +35,7 @@ from sys import argv, exit
 # User configuration
 # -----------------------------------------------------------
 LAB_NETWORKS = ['10.99.1.', '192.168.1.']
-PI_MACS = ['00:c0:ca:57:2d:99', 'b8:27:eb:cb:fc:1a', 'ff:ff:ff:ff:ff:ff']
+LAB_MACS = ['00:c0:ca:57:2d:99', 'b8:27:eb:cb:fc:1a', 'ff:ff:ff:ff:ff:ff']
 
 
 # -----------------------------------------------------------
@@ -74,7 +74,7 @@ def get_http(packets):
 # -----------------------------------------------------------
 # MAC addresses seen, and count
 # -----------------------------------------------------------
-def get_mac(packets, pi=PI_MACS):
+def get_mac(packets, lab_macs=LAB_MACS):
   mac_addresses = {}
   mac = ''
 
@@ -88,14 +88,14 @@ def get_mac(packets, pi=PI_MACS):
       # -----------------------------------------------------------
       # Discard traffic going between the WLAN and LAN NICs
       # -----------------------------------------------------------
-      if any(pi_mac in p[Ether].src for pi_mac in pi) and any(pi_mac in p[Ether].dst for pi_mac in pi):
+      if any(lab_mac in p[Ether].src for lab_mac in lab_macs) and any(lab_mac in p[Ether].dst for lab_mac in lab_macs):
         continue
 
       # -----------------------------------------------------------
       # Select the non-Pi MAC address
       # -----------------------------------------------------------
       mac = p[Ether].src
-      if not any(pi_mac in p[Ether].dst for pi_mac in pi):
+      if not any(lab_mac in p[Ether].dst for lab_mac in lab_macs):
         mac = p[Ether].dst
       
     # -----------------------------------------------------------
