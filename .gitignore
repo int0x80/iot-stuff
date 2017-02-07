@@ -1,0 +1,7 @@
+# Packet Captures #
+###################
+*.pcap
+
+# Result Files #
+################
+*.txt

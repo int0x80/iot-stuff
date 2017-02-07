@@ -23,8 +23,8 @@ from sys import argv, exit
 # -----------------------------------------------------------
 # User configuration
 # -----------------------------------------------------------
-LAB_NETWORK = '10.99.1.'
-WLAN_MAC = '00:c0:ca:57:2d:99'
+LAB_NETWORKS = ['10.99.1.', '192.168.1.']
+PI_MACS = ['00:c0:ca:57:2d:99', 'b8:27:eb:cb:fc:1a']
 
 
 # -----------------------------------------------------------
@@ -63,7 +63,7 @@ def get_http(packets):
 # -----------------------------------------------------------
 # MAC addresses seen, and count
 # -----------------------------------------------------------
-def get_mac(packets, pi=WLAN_MAC):
+def get_mac(packets, pi=PI_MACS):
   mac_addresses = {}
   mac = ''
 
@@ -73,8 +73,18 @@ def get_mac(packets, pi=WLAN_MAC):
   # -----------------------------------------------------------
   for p in packets:
     if p.haslayer(Ether):
+
+      # -----------------------------------------------------------
+      # Discard traffic going between the WLAN and LAN NICs
+      # -----------------------------------------------------------
+      if any(pi_mac in p[Ether].src for pi_mac in pi) and any(pi_mac in p[Ether].dst for pi_mac in pi):
+        continue
+
+      # -----------------------------------------------------------
+      # Select the non-Pi MAC address
+      # -----------------------------------------------------------
       mac = p[Ether].src
-      if p[Ether].dst != pi:
+      if not any(pi_mac in p[Ether].dst for pi_mac in pi):
         mac = p[Ether].dst
       
     # -----------------------------------------------------------
@@ -97,7 +107,7 @@ def get_mac(packets, pi=WLAN_MAC):
 # -----------------------------------------------------------
 # IP addresses, ports, and protocols seen
 # -----------------------------------------------------------
-def get_traffic(packets, lab_network=LAB_NETWORK):
+def get_traffic(packets, lab_network=LAB_NETWORKS):
   transmissions = []
   ip = ''
   port = ''
@@ -112,7 +122,7 @@ def get_traffic(packets, lab_network=LAB_NETWORK):
       # -----------------------------------------------------------
       # Quick check for intranet transmissions we can discard
       # -----------------------------------------------------------
-      if lab_network in p[IP].dst and lab_network in p[IP].src:
+      if any(lab_net in p[IP].src for lab_net in lab_network) and any(lab_net in p[IP].dst for lab_net in lab_network):
         continue
 
       # -----------------------------------------------------------
@@ -127,7 +137,7 @@ def get_traffic(packets, lab_network=LAB_NETWORK):
       # -----------------------------------------------------------
       ip = p[IP].src
       port = p[IP].sport
-      if lab_network not in p[IP].dst:
+      if not any(lab_net in p[IP].dst for lab_net in lab_network):
         ip = p[IP].dst
         port = p[IP].dport
 
@@ -156,7 +166,7 @@ def iptables_rules(device, mac_address, transmissions):
   # -----------------------------------------------------------
   # Process the transmissions from the pcap for filter rules
   # -----------------------------------------------------------
-  print 'iptables -I FORWARD -m mac --mac-source {} -j {}'.format(mac_address, chain_name)
+  print 'iptables -I OUTPUT -m mac --mac-source {} -j {}'.format(mac_address, chain_name)
   for transmission in transmissions:    
     print 'iptables -A {} -p {} -d {} --dport {} -j ACCEPT'.format(chain_name, transmission[2], transmission[0], transmission[1])
 
